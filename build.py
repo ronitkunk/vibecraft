@@ -121,9 +121,9 @@ def beam(spec: BeamSpec, origin: List[int] = [0, -60, 0]) -> List[str]:
         (y1 == y2 and z1 == z2)
     ):
         # Determine the constant axes and the axis of alignment
-        if best_axis==0:
+        if best_axis == 0:
             axis = "x"
-        elif best_axis==1:
+        elif best_axis == 1:
             axis = "y"
         else:
             axis = "z"
@@ -136,27 +136,51 @@ def beam(spec: BeamSpec, origin: List[int] = [0, -60, 0]) -> List[str]:
                 xb + 0, y1 + spec.thickness, z1 + spec.thickness,
                 spec.block, spec.mode, spec.reason, spec.explanation
             )
-            # Clear corners outside the circle, if circular
             if spec.shape == "circular":
                 r = spec.thickness
                 for y in range(-r, r + 1):
+                    # find outermost z values within circle
+                    z_min, z_max = None, None
                     for z in range(-r, r + 1):
-                        if y * y + z * z > r * r:
+                        if y * y + z * z <= r * r:
+                            if z_min is None:
+                                z_min = z
+                            z_max = z
+                    if z_min is not None:
+                        # clear outside both sides
+                        if z_min > -r:
                             cmds += fill_cmd(
-                                xa, y1 + y, z1 + z,
-                                xb, y1 + y, z1 + z,
+                                xa, y1 + y, z1 - r,
+                                xb, y1 + y, z1 + z_min - 1,
                                 "minecraft:air", "replace",
                                 "clearing circular corners",
-                                spec.explanation+": "+"trim outside incircle",
+                                spec.explanation + ": trim outside incircle",
                             )
-                        if spec.fill=="hollow" and y * y + z * z < (r-1) * (r-1):
+                        if z_max < r:
                             cmds += fill_cmd(
-                                xa, y1 + y, z1 + z,
-                                xb, y1 + y, z1 + z,
+                                xa, y1 + y, z1 + z_max + 1,
+                                xb, y1 + y, z1 + r,
                                 "minecraft:air", "replace",
-                                "hollowing circle",
-                                spec.explanation+": "+"trim inside incircle",
+                                "clearing circular corners",
+                                spec.explanation + ": trim outside incircle",
                             )
+                        # hollowing
+                        if spec.fill == "hollow":
+                            z_min_h, z_max_h = None, None
+                            for z in range(-r, r + 1):
+                                if y * y + z * z < (r - 1) * (r - 1):
+                                    if z_min_h is None:
+                                        z_min_h = z
+                                    z_max_h = z
+                            if z_min_h is not None:
+                                cmds += fill_cmd(
+                                    xa, y1 + y, z1 + z_min_h,
+                                    xb, y1 + y, z1 + z_max_h,
+                                    "minecraft:air", "replace",
+                                    "hollowing circle",
+                                    spec.explanation + ": trim inside incircle",
+                                )
+
         elif axis == "y":
             ya, yb = sorted([y1, y2])
             cmds += fill_cmd(
@@ -167,23 +191,45 @@ def beam(spec: BeamSpec, origin: List[int] = [0, -60, 0]) -> List[str]:
             if spec.shape == "circular":
                 r = spec.thickness
                 for x in range(-r, r + 1):
+                    z_min, z_max = None, None
                     for z in range(-r, r + 1):
-                        if x * x + z * z > r * r:
+                        if x * x + z * z <= r * r:
+                            if z_min is None:
+                                z_min = z
+                            z_max = z
+                    if z_min is not None:
+                        if z_min > -r:
                             cmds += fill_cmd(
-                                x1 + x, ya, z1 + z,
-                                x1 + x, yb, z1 + z,
+                                x1 + x, ya, z1 - r,
+                                x1 + x, yb, z1 + z_min - 1,
                                 "minecraft:air", "replace",
                                 "clearing circular corners",
-                                spec.explanation+": "+"trim outside incircle",
+                                spec.explanation + ": trim outside incircle",
                             )
-                        if spec.fill=="hollow" and x * x + z * z < (r-1) * (r-1):
+                        if z_max < r:
                             cmds += fill_cmd(
-                                x1 + x, ya, z1 + z,
-                                x1 + x, yb, z1 + z,
+                                x1 + x, ya, z1 + z_max + 1,
+                                x1 + x, yb, z1 + r,
                                 "minecraft:air", "replace",
-                                "hollowing circle",
-                                spec.explanation+": "+"trim inside incircle",
+                                "clearing circular corners",
+                                spec.explanation + ": trim outside incircle",
                             )
+                        if spec.fill == "hollow":
+                            z_min_h, z_max_h = None, None
+                            for z in range(-r, r + 1):
+                                if x * x + z * z < (r - 1) * (r - 1):
+                                    if z_min_h is None:
+                                        z_min_h = z
+                                    z_max_h = z
+                            if z_min_h is not None:
+                                cmds += fill_cmd(
+                                    x1 + x, ya, z1 + z_min_h,
+                                    x1 + x, yb, z1 + z_max_h,
+                                    "minecraft:air", "replace",
+                                    "hollowing circle",
+                                    spec.explanation + ": trim inside incircle",
+                                )
+
         else:  # z-axis alignment
             za, zb = sorted([z1, z2])
             cmds += fill_cmd(
@@ -194,24 +240,46 @@ def beam(spec: BeamSpec, origin: List[int] = [0, -60, 0]) -> List[str]:
             if spec.shape == "circular":
                 r = spec.thickness
                 for x in range(-r, r + 1):
+                    y_min, y_max = None, None
                     for y in range(-r, r + 1):
-                        if x * x + y * y > r * r:
+                        if x * x + y * y <= r * r:
+                            if y_min is None:
+                                y_min = y
+                            y_max = y
+                    if y_min is not None:
+                        if y_min > -r:
                             cmds += fill_cmd(
-                                x1 + x, y1 + y, za,
-                                x1 + x, y1 + y, zb,
+                                x1 + x, y1 - r, za,
+                                x1 + x, y1 + y_min - 1, zb,
                                 "minecraft:air", "replace",
                                 "clearing circular corners",
-                                spec.explanation+": "+"trim outside incircle",
+                                spec.explanation + ": trim outside incircle",
                             )
-                        if spec.fill=="hollow" and x * x + y * y < (r-1) * (r-1):
+                        if y_max < r:
                             cmds += fill_cmd(
-                                x1 + x, y1 + y, za,
-                                x1 + x, y1 + y, zb,
+                                x1 + x, y1 + y_max + 1, za,
+                                x1 + x, y1 + r, zb,
                                 "minecraft:air", "replace",
-                                "hollowing circle",
-                                spec.explanation+": "+"trim inside incircle",
+                                "clearing circular corners",
+                                spec.explanation + ": trim outside incircle",
                             )
+                        if spec.fill == "hollow":
+                            y_min_h, y_max_h = None, None
+                            for y in range(-r, r + 1):
+                                if x * x + y * y < (r - 1) * (r - 1):
+                                    if y_min_h is None:
+                                        y_min_h = y
+                                    y_max_h = y
+                            if y_min_h is not None:
+                                cmds += fill_cmd(
+                                    x1 + x, y1 + y_min_h, za,
+                                    x1 + x, y1 + y_max_h, zb,
+                                    "minecraft:air", "replace",
+                                    "hollowing circle",
+                                    spec.explanation + ": trim inside incircle",
+                                )
         return cmds
+
 
     # ---- GENERAL CASE: Arbitrary orientation ----
     # fallback to layer-by-layer construction along best axis

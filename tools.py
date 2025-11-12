@@ -74,7 +74,7 @@ class BeamSpec(BaseModel):
         description="Cross-section shape of the line."
     )
     direction: Optional[Literal["XY", "YZ", "XZ", "X", "Y", "Z"]] = Field(
-        ...,
+        default="Y",
         description="Which coordinate plane or axis should each stacked circle/square used be parallel to?"
     )
     thickness: int = Field(
